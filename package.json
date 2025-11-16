@@ -1,0 +1,33 @@
+{
+  "name": "devtool-mcp-demo",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/odex21/devfest-devtools-mcp-workshop.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/odex21/devfest-devtools-mcp-workshop/issues"
+  },
+  "homepage": "https://github.com/odex21/devfest-devtools-mcp-workshop#readme",
+  "description": "",
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "daisyui": "^4.12.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.13",
+    "vite": "^7.0.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

@@ -156,6 +156,8 @@
         border-radius: var(--radius-pill);
         border: 1px solid transparent;
         cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
         transition: background-color var(--transition-fast),
           color var(--transition-fast), box-shadow var(--transition-fast),
           border-color var(--transition-fast), transform var(--transition-fast);
@@ -524,6 +526,14 @@
         line-height: 1.8;
       }
 
+      #gdg-devfest .section-header,
+      #devtools-mcp .section-header,
+      #about .section-header {
+        border-top: 1px solid rgba(224, 224, 224, 0.85);
+        padding-top: 32px;
+        margin-top: 8px;
+      }
+
       .cards-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -658,7 +668,7 @@
       /* DevTools MCP section */
       .mcp-layout {
         display: grid;
-        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr);
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.9fr);
         gap: 24px;
         align-items: start;
       }
@@ -685,14 +695,26 @@
         background: #202124;
         color: #e8eaed;
         border-radius: var(--radius-medium);
-        padding: 14px 14px 12px;
+        padding: 10px 12px 10px;
         box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
         border: 1px solid #3c4043;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
           "Liberation Mono", "Courier New", monospace;
-        font-size: 12px;
+        font-size: 11px;
         position: relative;
         overflow: hidden;
+      }
+
+      .code-snippet {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: var(--radius-medium);
+        background: #111827;
+        color: #e5e7eb;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 11px;
+        overflow-x: auto;
       }
 
       .code-card-header {
@@ -950,7 +972,7 @@
         }
 
         section {
-          padding: 56px 0;
+          padding: 52px 0;
         }
 
         header {
@@ -1009,7 +1031,16 @@
         }
 
         .hero-right {
-          order: -1;
+          order: 2;
+        }
+
+        .hero-title {
+          font-size: 26px;
+          line-height: 1.2;
+        }
+
+        .hero-subtitle {
+          font-size: 14px;
         }
 
         .footer-inner {
@@ -1162,9 +1193,9 @@
                     <strong>「热爱分享与学习的开发者」</strong>。
                   </p>
                   <p>
-                    这次 Workshop
-                    以「<strong>Chrome DevTools MCP Server</strong>」为主题，从浏览器调试到自动化、从本地开发体验到
+                    这次 Workshop 以「<strong>Chrome DevTools MCP Server</strong>」为主题，从浏览器调试到自动化、从本地开发体验到
                     MCP 协议和工具生态，让我对「<strong>浏览器 + 工具链</strong>」之间的连接有了更加直观的认识。
+                    这份页面不是官方活动页，而是我自己的 DevFest Workshop 记录。
                   </p>
 
                   <div class="gdg-metas">
@@ -1257,30 +1288,6 @@
                     </div>
                   </article>
 
-                  <article class="card">
-                    <div class="card-header-row">
-                      <div class="card-title">这份页面的定位</div>
-                      <span class="card-tag">Why this page</span>
-                    </div>
-                    <div class="card-body">
-                      这不是一份官方活动页，而是
-                      <strong>「我的个人 Workshop 记录」</strong>：
-                      <ul class="card-list">
-                        <li>
-                          <span class="card-list-bullet"></span>
-                          <span>记录 DevTools MCP 的学习路径和关键概念。</span>
-                        </li>
-                        <li>
-                          <span class="card-list-bullet"></span>
-                          <span>整理实践步骤，方便之后回顾和复用。</span>
-                        </li>
-                        <li>
-                          <span class="card-list-bullet"></span>
-                          <span>通过 GitHub Pages 公开出来，也许能帮到后来的人。</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </article>
                 </div>
               </div>
             </div>
@@ -1295,10 +1302,10 @@
               <h2 class="section-title">DevTools MCP：把浏览器变成可编排的开发节点</h2>
               <p class="section-subtitle">
                 MCP（Model Context Protocol）
-                是一种让工具、服务和模型之间互通的协议，而 Chrome DevTools MCP Server
-                则把「浏览器调试能力」提升为一个可以被调用、被编排的能力节点。
-                在这次 Workshop 中，我把它理解为：一扇连接
-                <strong>浏览器 · DevTools · AI / 工具链</strong> 的「任意门」。
+                是一种让工具、服务和模型之间互通的协议，而
+                <strong>Chrome DevTools MCP Server</strong> 是由 Chrome 团队提供的
+                MCP Server，实现了对 Chrome DevTools 调试能力的封装。
+                简单理解：它让「浏览器调试工具」可以作为一个标准化的能力节点，被 Codex 等 MCP 客户端调用。
               </p>
             </div>
 
@@ -1440,6 +1447,22 @@
                   <p>
                     在实际 Workshop 中，我们会基于具体的 DevTools MCP Server 实现，配置连接参数、选择页面、执行操作，并通过日志或工具界面观察结果。
                   </p>
+                  <p>
+                    下面是我在 VS Code + Codex 环境中的一段
+                    <strong>真实配置记录</strong>，使用 TOML 把官方的
+                    <code>chrome-devtools-mcp</code> Server 接入 Codex：
+                  </p>
+                  <pre class="code-snippet"><code># ~/.codex/config.toml 中的节选
+[mcp_servers.chrome-devtools]
+command = "npx"
+args = ["-y", "chrome-devtools-mcp@latest"]
+# 可按需加入环境变量，比如指定 Chrome 路径：
+# env = { CHROME_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" }</code></pre>
+                  <p>
+                    配好以后，在 VS Code 里通过 Codex 面板或对话，选择
+                    <strong>chrome-devtools</strong> 这个 MCP Server，就可以像这次 Workshop 一样：
+                    打开本地页面、检查元素、修改样式、截全屏，甚至配合 GitHub Pages 做发布前检查。
+                  </p>
                 </div>
               </div>
             </div>
@@ -1507,8 +1530,7 @@
                   </a>
                 </div>
                 <p class="contact-note">
-                  如果你也是在玩 DevTools MCP、Web 自动化或者对这份 Workshop 记录感兴趣，欢迎通过
-                  GitHub 交流。这个页面会部署在 GitHub Pages 上，之后也会逐步补充更多实践细节。
+                  如果你也在折腾 DevTools MCP、Web 自动化或者对这份 Workshop 记录感兴趣，欢迎在 GitHub 上找我交流。
                 </p>
               </aside>
             </div>
@@ -1527,6 +1549,8 @@
         </div>
       </footer>
     </div>
+
+    <script type="module" src="/src/main.js"></script>
 
     <script>
       // 简单的导航滚动和 active 状态逻辑
