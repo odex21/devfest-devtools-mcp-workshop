@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DevFest Workshop · Chrome DevTools MCP</title>
+    <meta
+      name="description"
+      content="记录我在 Google DevFest Workshop 上关于 Chrome DevTools MCP Server 的学习与实践。"
+    />
+    <!-- Google Fonts: Material 风格常用的 Roboto -->
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #1a73e8;
+        --primary-light: #e8f0fe;
+        --primary-dark: #1557b0;
+        --surface: #ffffff;
+        --background: #f5f7fb;
+        --text-main: #202124;
+        --text-muted: #5f6368;
+        --divider: #e0e0e0;
+        --shadow-soft: 0 10px 30px rgba(32, 33, 36, 0.12);
+        --radius-large: 18px;
+        --radius-medium: 12px;
+        --radius-pill: 999px;
+        --transition-fast: 180ms ease-out;
+        --max-width: 1080px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Roboto", system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top left, #e8f0fe 0, #f5f7fb 50%, #ffffff 100%);
+        color: var(--text-main);
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-height: 100vh;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      img {
+        max-width: 100%;
+        display: block;
+      }
+
+      /* Layout */
+      .page {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      .container {
+        width: 100%;
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      /* App bar / header */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        backdrop-filter: blur(16px);
+        background: rgba(245, 247, 251, 0.86);
+        border-bottom: 1px solid rgba(224, 224, 224, 0.8);
+      }
+
+      .app-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-mark {
+        width: 28px;
+        height: 28px;
+        border-radius: 9px;
+        background: conic-gradient(
+          from 180deg,
+          #4285f4,
+          #34a853,
+          #fbbc05,
+          #ea4335,
+          #4285f4
+        );
+        box-shadow: 0 4px 10px rgba(66, 133, 244, 0.35);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .brand-mark::after {
+        content: "";
+        position: absolute;
+        inset: 5px;
+        border-radius: 7px;
+        background: #ffffff;
+      }
+
+      .brand-text-main {
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .brand-text-sub {
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 14px;
+        color: var(--text-muted);
+      }
+
+      .nav-link {
+        padding: 8px 14px;
+        border-radius: var(--radius-pill);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background-color var(--transition-fast),
+          color var(--transition-fast), box-shadow var(--transition-fast),
+          border-color var(--transition-fast), transform var(--transition-fast);
+      }
+
+      .nav-link:hover {
+        background: #e8f0fe;
+        border-color: rgba(26, 115, 232, 0.25);
+        color: var(--primary-dark);
+        box-shadow: 0 3px 10px rgba(26, 115, 232, 0.15);
+        transform: translateY(-1px);
+      }
+
+      .nav-link.active {
+        background: var(--primary);
+        color: #ffffff;
+        box-shadow: 0 4px 14px rgba(26, 115, 232, 0.45);
+      }
+
+      .nav-cta {
+        background: #ffffff;
+        border-radius: var(--radius-pill);
+        padding: 6px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(32, 33, 36, 0.15);
+        border: 1px solid rgba(224, 224, 224, 0.9);
+        font-size: 13px;
+      }
+
+      .nav-cta-pill {
+        background: var(--primary-light);
+        color: var(--primary-dark);
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      /* Hero section */
+      main {
+        flex: 1;
+      }
+
+      section {
+        padding: 72px 0;
+      }
+
+      #home {
+        padding-top: 56px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+        gap: 32px;
+        align-items: center;
+      }
+
+      .hero-left {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .hero-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        background: rgba(26, 115, 232, 0.06);
+        color: var(--primary-dark);
+        border: 1px solid rgba(26, 115, 232, 0.25);
+      }
+
+      .chip-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: radial-gradient(circle at 30% 30%, #fff, #34a853);
+        box-shadow: 0 0 0 4px rgba(52, 168, 83, 0.25);
+      }
+
+      .hero-title {
+        font-size: clamp(32px, 4vw, 40px);
+        line-height: 1.15;
+        letter-spacing: 0.02em;
+      }
+
+      .hero-title span.highlight {
+        background: linear-gradient(120deg, #4285f4, #34a853, #fbbc05, #ea4335);
+        -webkit-background-clip: text;
+        color: transparent;
+      }
+
+      .hero-subtitle {
+        font-size: 16px;
+        color: var(--text-muted);
+        max-width: 480px;
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        background: #ffffff;
+        border-radius: 999px;
+        border: 1px solid var(--divider);
+        box-shadow: 0 4px 12px rgba(32, 33, 36, 0.1);
+      }
+
+      .meta-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #ea4335;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 8px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 18px;
+        font-size: 14px;
+        border-radius: var(--radius-pill);
+        border: none;
+        cursor: pointer;
+        transition: background-color var(--transition-fast),
+          box-shadow var(--transition-fast), transform var(--transition-fast);
+        white-space: nowrap;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: #ffffff;
+        box-shadow: 0 5px 16px rgba(26, 115, 232, 0.5);
+      }
+
+      .btn-primary:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 22px rgba(26, 115, 232, 0.6);
+      }
+
+      .btn-secondary {
+        background: #ffffff;
+        color: var(--text-main);
+        border: 1px solid var(--divider);
+        box-shadow: 0 4px 14px rgba(32, 33, 36, 0.12);
+      }
+
+      .btn-secondary:hover {
+        background: #f8f9fa;
+        transform: translateY(-1px);
+      }
+
+      .btn-icon-circle {
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+      }
+
+      .hero-note {
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      .hero-right {
+        position: relative;
+      }
+
+      .hero-card {
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: var(--radius-large);
+        padding: 18px 18px 16px;
+        box-shadow: var(--shadow-soft);
+        border: 1px solid rgba(224, 224, 224, 0.9);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero-card::before {
+        content: "";
+        position: absolute;
+        inset: -60px -40px auto auto;
+        background: conic-gradient(
+          from 180deg,
+          rgba(66, 133, 244, 0.18),
+          rgba(52, 168, 83, 0.18),
+          rgba(251, 188, 5, 0.18),
+          rgba(234, 67, 53, 0.18),
+          rgba(66, 133, 244, 0.18)
+        );
+        filter: blur(26px);
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      .hero-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .hero-card-title {
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .hero-card-tag {
+        font-size: 11px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: rgba(26, 115, 232, 0.05);
+        border: 1px solid rgba(26, 115, 232, 0.35);
+        color: var(--primary-dark);
+      }
+
+      .hero-card-body {
+        font-size: 11px;
+        color: var(--text-muted);
+        display: grid;
+        grid-template-columns: auto 1fr;
+        column-gap: 14px;
+        row-gap: 6px;
+        margin-bottom: 10px;
+      }
+
+      .hero-card-label {
+        color: var(--text-muted);
+      }
+
+      .hero-card-value {
+        font-weight: 500;
+        color: var(--text-main);
+      }
+
+      .hero-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 8px;
+        border-top: 1px dashed rgba(224, 224, 224, 0.9);
+      }
+
+      .hero-card-avatar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .avatar-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4285f4, #34a853);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .avatar-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .avatar-name {
+        font-size: 13px;
+      }
+
+      .avatar-role {
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      .hero-card-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        padding: 4px 9px;
+        border-radius: 999px;
+        background: #f1f3f4;
+      }
+
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #34a853;
+      }
+
+      .hero-floating-note {
+        position: absolute;
+        right: -4px;
+        bottom: -4px;
+        transform: translate(-10%, -20%);
+        font-size: 11px;
+        background: #ffffff;
+        border-radius: 999px;
+        padding: 4px 10px;
+        box-shadow: 0 6px 18px rgba(32, 33, 36, 0.22);
+        border: 1px solid rgba(224, 224, 224, 0.9);
+      }
+
+      /* Sections common */
+      .section-header {
+        margin-bottom: 32px;
+      }
+
+      .section-eyebrow {
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        color: var(--primary-dark);
+        margin-bottom: 8px;
+      }
+
+      .section-title {
+        font-size: 22px;
+        margin-bottom: 8px;
+      }
+
+      .section-subtitle {
+        font-size: 14px;
+        color: var(--text-muted);
+        max-width: 560px;
+      }
+
+      .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: var(--radius-medium);
+        padding: 16px 16px 14px;
+        border: 1px solid rgba(224, 224, 224, 0.9);
+        box-shadow: 0 8px 26px rgba(32, 33, 36, 0.12);
+      }
+
+      .card-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .card-title {
+        font-size: 15px;
+        font-weight: 500;
+      }
+
+      .card-tag {
+        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #f1f3f4;
+      }
+
+      .card-body {
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.6;
+      }
+
+      .card-list {
+        list-style: none;
+        padding: 0;
+        margin: 10px 0 0;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .card-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+
+      .card-list-bullet {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--primary);
+        margin-top: 6px;
+      }
+
+      /* GDG & DevFest section */
+      #gdg-devfest {
+        background: radial-gradient(circle at top right, #e8f0fe 0, #f5f7fb 40%, #ffffff 100%);
+      }
+
+      .gdg-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .gdg-summary {
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: var(--radius-medium);
+        padding: 16px 18px 14px;
+        border: 1px solid rgba(224, 224, 224, 0.9);
+        box-shadow: 0 6px 22px rgba(32, 33, 36, 0.12);
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.7;
+      }
+
+      .gdg-summary strong {
+        color: var(--text-main);
+      }
+
+      .gdg-metas {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 10px;
+      }
+
+      .gdg-meta-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 11px;
+        color: var(--text-muted);
+        border: 1px dashed rgba(189, 193, 198, 0.9);
+      }
+
+      .gdg-meta-title {
+        font-size: 12px;
+        color: var(--text-main);
+        margin-bottom: 4px;
+        font-weight: 500;
+      }
+
+      .gdg-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid var(--divider);
+        font-size: 11px;
+        box-shadow: 0 4px 12px rgba(32, 33, 36, 0.08);
+      }
+
+      .gdg-badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #4285f4;
+      }
+
+      /* DevTools MCP section */
+      .mcp-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .pill-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        background: #e8f0fe;
+        color: var(--primary-dark);
+      }
+
+      .pill-label-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #1a73e8;
+      }
+
+      .code-card {
+        background: #202124;
+        color: #e8eaed;
+        border-radius: var(--radius-medium);
+        padding: 14px 14px 12px;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+        border: 1px solid #3c4043;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .code-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 11px;
+        color: #9aa0a6;
+      }
+
+      .code-dots {
+        display: flex;
+        gap: 4px;
+      }
+
+      .code-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+      }
+
+      .code-dot.red {
+        background: #f28b82;
+      }
+
+      .code-dot.yellow {
+        background: #fbbc04;
+      }
+
+      .code-dot.green {
+        background: #34a853;
+      }
+
+      .code-lines {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        column-gap: 10px;
+        row-gap: 2px;
+      }
+
+      .code-line-number {
+        color: #5f6368;
+        text-align: right;
+      }
+
+      .code-line {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .code-token-keyword {
+        color: #8ab4f8;
+      }
+
+      .code-token-string {
+        color: #f28b82;
+      }
+
+      .code-token-comment {
+        color: #9aa0a6;
+      }
+
+      .code-token-fn {
+        color: #81c995;
+      }
+
+      .mcp-points {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-top: 10px;
+      }
+
+      .mcp-points ul {
+        margin: 8px 0 0;
+        padding-left: 16px;
+      }
+
+      .mcp-points li {
+        margin-bottom: 4px;
+      }
+
+      /* About me section */
+      .about-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+        gap: 24px;
+        align-items: stretch;
+      }
+
+      .about-card {
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: var(--radius-medium);
+        padding: 18px 18px 16px;
+        border: 1px solid rgba(224, 224, 224, 0.9);
+        box-shadow: 0 8px 24px rgba(32, 33, 36, 0.14);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .about-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .about-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: conic-gradient(
+          from 180deg,
+          #4285f4,
+          #34a853,
+          #fbbc05,
+          #ea4335,
+          #4285f4
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 18px;
+        box-shadow: 0 6px 18px rgba(32, 33, 36, 0.35);
+      }
+
+      .about-title {
+        font-size: 15px;
+        font-weight: 500;
+      }
+
+      .about-role {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .about-body {
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.7;
+      }
+
+      .about-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 4px;
+      }
+
+      .tag {
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #f1f3f4;
+      }
+
+      .contact-card {
+        background: #202124;
+        color: #e8eaed;
+        border-radius: var(--radius-medium);
+        padding: 16px 16px 14px;
+        border: 1px solid #3c4043;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .contact-title {
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .contact-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+      }
+
+      .contact-chip {
+        font-size: 11px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #303134;
+        color: #9aa0a6;
+      }
+
+      .contact-link {
+        color: #8ab4f8;
+        text-decoration: underline;
+      }
+
+      .contact-note {
+        font-size: 11px;
+        color: #9aa0a6;
+      }
+
+      footer {
+        border-top: 1px solid rgba(224, 224, 224, 0.9);
+        background: #ffffff;
+      }
+
+      .footer-inner {
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      .footer-nav {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .footer-link {
+        padding: 4px 0;
+      }
+
+      /* Responsive */
+      @media (max-width: 900px) {
+        .hero,
+        .gdg-layout,
+        .mcp-layout,
+        .about-layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        section {
+          padding: 56px 0;
+        }
+
+        header {
+          position: sticky;
+          top: 0;
+        }
+
+        .app-bar {
+          height: 58px;
+        }
+
+        nav {
+          gap: 8px;
+        }
+
+        .nav-link {
+          padding: 6px 10px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .cards-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .hero {
+          gap: 26px;
+        }
+
+        .hero-right {
+          order: -1;
+        }
+
+        .footer-inner {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 4px;
+          height: auto;
+          padding: 10px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <div class="container app-bar">
+          <div class="brand">
+            <div class="brand-mark"></div>
+            <div>
+              <div class="brand-text-main">DevFest Workshop Log</div>
+              <div class="brand-text-sub">Chrome DevTools MCP · odex</div>
+            </div>
+          </div>
+          <nav>
+            <button class="nav-link active" data-target="home">活动首页</button>
+            <button class="nav-link" data-target="gdg-devfest">GDG &amp; DevFest</button>
+            <button class="nav-link" data-target="devtools-mcp">DevTools MCP</button>
+            <button class="nav-link" data-target="about">关于我</button>
+            <div class="nav-cta">
+              <span class="nav-cta-pill">DevFest · Workshop</span>
+              <span>记录这次 Chrome DevTools MCP 之旅</span>
+            </div>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <!-- Home / overview -->
+        <section id="home">
+          <div class="container hero">
+            <div class="hero-left">
+              <div class="hero-chip-row">
+                <span class="chip">
+                  <span class="chip-dot"></span>
+                  Google DevFest Workshop · 实战记录
+                </span>
+                <span class="chip">主题：Chrome DevTools MCP Server</span>
+              </div>
+              <h1 class="hero-title">
+                用 <span class="highlight">DevTools MCP</span> 打通
+                <br />
+                浏览器与开发者工具的「任意门」
+              </h1>
+              <p class="hero-subtitle">
+                这是一份我在 Google DevFest Workshop 中关于
+                <strong>Chrome DevTools MCP Server</strong> 的学习与实践记录。
+                从 GDG &amp; DevFest 的社区氛围，到 DevTools MCP 的实际落地，再到我自己的思考与收获，都整理在这里。
+              </p>
+              <div class="hero-meta">
+                <div class="meta-pill">
+                  <span class="meta-dot"></span>
+                  DevFest · Workshop · 深圳
+                </div>
+                <div class="meta-pill">
+                  Chrome DevTools · MCP · Web 开发
+                </div>
+              </div>
+              <div class="hero-actions">
+                <button class="btn btn-primary" data-target="devtools-mcp">
+                  <span class="btn-icon-circle">▶</span>
+                  快速查看 DevTools MCP 笔记
+                </button>
+                <button class="btn btn-secondary" data-target="gdg-devfest">
+                  了解 GDG 和 DevFest
+                </button>
+              </div>
+              <div class="hero-note">
+                提示：你可以通过顶部导航，快速跳转到各个模块。
+              </div>
+            </div>
+
+            <div class="hero-right">
+              <div class="hero-card">
+                <div class="hero-card-header">
+                  <div>
+                    <div class="hero-card-title">DevFest Workshop · Session Snapshot</div>
+                    <div class="hero-card-subtitle" style="font-size: 11px; color: #5f6368">
+                      Chrome DevTools MCP · Hands-on
+                    </div>
+                  </div>
+                  <span class="hero-card-tag">Live Notes</span>
+                </div>
+                <div class="hero-card-body">
+                  <div class="hero-card-label">主题</div>
+                  <div class="hero-card-value">DevTools MCP Server 与浏览器联动</div>
+                  <div class="hero-card-label">场景</div>
+                  <div class="hero-card-value">DevFest Workshop · 深圳</div>
+                  <div class="hero-card-label">关键词</div>
+                  <div class="hero-card-value">MCP · DevTools · Automation · DX</div>
+                  <div class="hero-card-label">记录方式</div>
+                  <div class="hero-card-value">单页活动官网 · GitHub Pages</div>
+                </div>
+                <div class="hero-card-footer">
+                  <div class="hero-card-avatar">
+                    <div class="avatar-circle">O</div>
+                    <div class="avatar-meta">
+                      <div class="avatar-name">odex</div>
+                      <div class="avatar-role">Web 开发者 · 喜欢原神启动</div>
+                    </div>
+                  </div>
+                  <div class="hero-card-status">
+                    <span class="status-dot"></span>
+                    <span>记录进行中 · v1</span>
+                  </div>
+                </div>
+              </div>
+              <div class="hero-floating-note">
+                下一步：接入 DevTools MCP，边调试边记录。
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- GDG & DevFest -->
+        <section id="gdg-devfest">
+          <div class="container">
+            <div class="section-header">
+              <div class="section-eyebrow">Community · GDG · DevFest</div>
+              <h2 class="section-title">GDG 与 DevFest：开发者的线下能量场</h2>
+              <p class="section-subtitle">
+                Google Developer Groups（GDG）是面向开发者的本地技术社区，而 DevFest
+                则是 GDG 社区一年一度的技术盛会。
+                这里不仅有分享和 Workshop，更重要的是能遇到一群同样热爱技术的人。
+              </p>
+            </div>
+
+            <div class="gdg-layout">
+              <div>
+                <div class="gdg-summary">
+                  <p>
+                    在 <strong>GDG</strong> 社区，你会发现很多熟悉的关键词：
+                    <strong>Android、Web、Cloud、AI</strong>，也会发现很多不那么陌生的人——
+                    大家来自不同的公司、学校和城市，但在 DevFest 的现场，大家有一个共同的身份：
+                    <strong>「热爱分享与学习的开发者」</strong>。
+                  </p>
+                  <p>
+                    这次 Workshop
+                    以「<strong>Chrome DevTools MCP Server</strong>」为主题，从浏览器调试到自动化、从本地开发体验到
+                    MCP 协议和工具生态，让我对「<strong>浏览器 + 工具链</strong>」之间的连接有了更加直观的认识。
+                  </p>
+
+                  <div class="gdg-metas">
+                    <div class="gdg-meta-card">
+                      <div class="gdg-meta-title">GDG 是什么？</div>
+                      <div>
+                        - 由本地志愿者组织的 Google 开发者社区
+                        <br />
+                        - 专注技术分享、线下活动和实践
+                      </div>
+                    </div>
+                    <div class="gdg-meta-card">
+                      <div class="gdg-meta-title">DevFest 的特点</div>
+                      <div>
+                        - 一年一度的开发者节日
+                        <br />
+                        - Talk + Workshop + 交流 &amp; Networking
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap">
+                    <span class="gdg-badge">
+                      <span class="gdg-badge-dot"></span>
+                      真实场景 Demo
+                    </span>
+                    <span class="gdg-badge">
+                      <span class="gdg-badge-dot" style="background: #34a853"></span>
+                      Workshop 形式，上手即实践
+                    </span>
+                    <span class="gdg-badge">
+                      <span class="gdg-badge-dot" style="background: #fbbc05"></span>
+                      社区氛围轻松 · 问题随时提
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="cards-grid">
+                  <article class="card">
+                    <div class="card-header-row">
+                      <div class="card-title">活动结构</div>
+                      <span class="card-tag">Session Flow</span>
+                    </div>
+                    <div class="card-body">
+                      这场 DevFest Workshop 大致可以拆成这样的节奏：
+                      <ul class="card-list">
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span><strong>01 · 认识 GDG 与 DevFest</strong>：社区介绍、往期活动回顾。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span><strong>02 · Chrome DevTools MCP 概览</strong>：为什么需要 MCP？能做什么？</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span><strong>03 · 实战 Workshop</strong>：配置 DevTools MCP Server，完成端到端联动。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span><strong>04 · 自由交流</strong>：和讲师、同学交流技术实践与踩坑经验。</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </article>
+
+                  <article class="card">
+                    <div class="card-header-row">
+                      <div class="card-title">现场氛围</div>
+                      <span class="card-tag">DevFest Vibes</span>
+                    </div>
+                    <div class="card-body">
+                      对我来说，DevFest 更像是「技术 + 线下社交」的结合：
+                      <ul class="card-list">
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>可以近距离听到第一手实践经验。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>遇到很多同样在做 Web / DevTools / 自动化相关的开发者。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>在 Workshop 中一起动手做 Demo，比看文档更直观。</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </article>
+
+                  <article class="card">
+                    <div class="card-header-row">
+                      <div class="card-title">这份页面的定位</div>
+                      <span class="card-tag">Why this page</span>
+                    </div>
+                    <div class="card-body">
+                      这不是一份官方活动页，而是
+                      <strong>「我的个人 Workshop 记录」</strong>：
+                      <ul class="card-list">
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>记录 DevTools MCP 的学习路径和关键概念。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>整理实践步骤，方便之后回顾和复用。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>通过 GitHub Pages 公开出来，也许能帮到后来的人。</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- DevTools MCP -->
+        <section id="devtools-mcp">
+          <div class="container">
+            <div class="section-header">
+              <div class="section-eyebrow">Chrome DevTools · MCP Server</div>
+              <h2 class="section-title">DevTools MCP：把浏览器变成可编排的开发节点</h2>
+              <p class="section-subtitle">
+                MCP（Model Context Protocol）
+                是一种让工具、服务和模型之间互通的协议，而 Chrome DevTools MCP Server
+                则把「浏览器调试能力」提升为一个可以被调用、被编排的能力节点。
+                在这次 Workshop 中，我把它理解为：一扇连接
+                <strong>浏览器 · DevTools · AI / 工具链</strong> 的「任意门」。
+              </p>
+            </div>
+
+            <div class="mcp-layout">
+              <div>
+                <div class="pill-label">
+                  <span class="pill-label-dot"></span>
+                  我在 Workshop 中学到的关键点
+                </div>
+
+                <div class="cards-grid" style="margin-top: 14px">
+                  <article class="card">
+                    <div class="card-header-row">
+                      <div class="card-title">DevTools MCP 是什么？</div>
+                      <span class="card-tag">What</span>
+                    </div>
+                    <div class="card-body">
+                      <ul class="card-list">
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>一个把 <strong>Chrome DevTools</strong> 能力包装成 MCP Server 的实现。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>可以通过 MCP 调用来操控浏览器页面、元素和网络请求等。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>让「调试 / 自动化」和「模型 / 代理」可以说同一种语言。</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </article>
+
+                  <article class="card">
+                    <div class="card-header-row">
+                      <div class="card-title">能解决什么问题？</div>
+                      <span class="card-tag">Why</span>
+                    </div>
+                    <div class="card-body">
+                      <ul class="card-list">
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>在 <strong>真实浏览器环境</strong> 中完成页面自动化和调试，而不是只看静态代码。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>把复杂重复的 DevTools 操作，交给工具 / 代理来完成。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>为前端 / Web 自动化场景提供更自然的「对话式」入口。</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </article>
+
+                  <article class="card">
+                    <div class="card-header-row">
+                      <div class="card-title">在 Workshop 里我做了什么？</div>
+                      <span class="card-tag">Practice</span>
+                    </div>
+                    <div class="card-body">
+                      <ul class="card-list">
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>体验了如何通过 MCP 与 Chrome DevTools 建立连接。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>在浏览器页面上执行「选择元素、修改样式、截图、刷新」等操作。</span>
+                        </li>
+                        <li>
+                          <span class="card-list-bullet"></span>
+                          <span>把这些能力与自己的 Web 开发经验结合起来，思考可以扩展的场景。</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </article>
+                </div>
+
+                <div class="mcp-points">
+                  <strong>个人理解：</strong> DevTools MCP 不是一个「新的框架」，而是一种把已有浏览器调试能力
+                  <strong>结构化、可组合、可远程调用</strong> 的方式。
+                  当它和 GitHub Pages、CI/CD、自动化脚本甚至 AI Agent 结合时，会有很多值得挖的方向。
+                </div>
+              </div>
+
+              <div>
+                <div class="code-card" aria-label="DevTools MCP 示例调用">
+                  <div class="code-card-header">
+                    <div>devtools-mcp-session.log</div>
+                    <div class="code-dots">
+                      <span class="code-dot red"></span>
+                      <span class="code-dot yellow"></span>
+                      <span class="code-dot green"></span>
+                    </div>
+                  </div>
+                  <div class="code-lines">
+                    <span class="code-line-number">1</span>
+                    <span class="code-line">
+                      <span class="code-token-comment">// 通过 MCP 连接 Chrome DevTools</span>
+                    </span>
+                    <span class="code-line-number">2</span>
+                    <span class="code-line">
+                      <span class="code-token-keyword">invoke</span>
+                      <span> devtools.mcp.connect</span>
+                      <span class="code-token-string">("local-chrome")</span>
+                    </span>
+                    <span class="code-line-number">3</span>
+                    <span class="code-line">
+                      <span class="code-token-keyword">await</span>
+                      <span> devtools.</span><span class="code-token-fn">openPage</span>
+                      <span class="code-token-string">("https://odex-devfest.github.io")</span>
+                    </span>
+                    <span class="code-line-number">4</span>
+                    <span class="code-line">
+                      <span class="code-token-keyword">await</span>
+                      <span> devtools.</span><span class="code-token-fn">highlight</span>
+                      <span class="code-token-string">("#devtools-mcp")</span>
+                    </span>
+                    <span class="code-line-number">5</span>
+                    <span class="code-line">
+                      <span class="code-token-keyword">await</span>
+                      <span> devtools.</span><span class="code-token-fn">screenshot</span>
+                      <span class="code-token-string">("devtools-mcp-section.png")</span>
+                    </span>
+                    <span class="code-line-number">6</span>
+                    <span class="code-line">
+                      <span class="code-token-comment">// 通过 MCP，把页面调试过程结构化记录下来</span>
+                    </span>
+                  </div>
+                </div>
+                <div class="mcp-points">
+                  <p>
+                    上面是一个概念性的「伪调用」示例，用来表达这种工作流的感觉：
+                    <strong>用一个统一的协议来调用浏览器能力</strong>。
+                  </p>
+                  <p>
+                    在实际 Workshop 中，我们会基于具体的 DevTools MCP Server 实现，配置连接参数、选择页面、执行操作，并通过日志或工具界面观察结果。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- About me -->
+        <section id="about">
+          <div class="container">
+            <div class="section-header">
+              <div class="section-eyebrow">About · odex</div>
+              <h2 class="section-title">关于我：Web 开发者 &amp; 原神启动爱好者</h2>
+              <p class="section-subtitle">
+                这次 DevFest Workshop 是我将「日常 Web 开发」和「DevTools MCP」连接起来的一个节点。
+                我希望把这次体验整理出来，作为之后在浏览器自动化、开发者体验（DX）上的一个起点。
+              </p>
+            </div>
+
+            <div class="about-layout">
+              <article class="about-card">
+                <div class="about-header">
+                  <div class="about-avatar">O</div>
+                  <div>
+                    <div class="about-title">odex</div>
+                    <div class="about-role">Web 开发者 · 喜欢原神启动</div>
+                  </div>
+                </div>
+                <div class="about-body">
+                  <p>
+                    作为一名 <strong>Web 开发者</strong>，我平时主要关注前端开发、开发者工具和自动化相关的内容。
+                    在浏览器里写代码、调样式、看网络请求，是日常工作的一部分。
+                  </p>
+                  <p>
+                    另一方面，我也很享受游戏带来的沉浸感 —— 比如在「<strong>原神</strong>」里探索世界。
+                    在某种程度上，<strong>好的开发者工具</strong> 和 <strong>优秀的游戏体验</strong> 有点像：
+                    它们都在努力把复杂的系统，包装成顺滑、自然的交互。
+                  </p>
+                  <div class="about-tags">
+                    <span class="tag">Web 前端</span>
+                    <span class="tag">DevTools</span>
+                    <span class="tag">MCP</span>
+                    <span class="tag">Developer Experience (DX)</span>
+                    <span class="tag">原神启动</span>
+                  </div>
+                </div>
+              </article>
+
+              <aside class="contact-card" aria-label="联系信息与 GitHub">
+                <div class="contact-title">联系与更多项目</div>
+                <div class="contact-row">
+                  <span class="contact-chip">GitHub</span>
+                  <a
+                    class="contact-link"
+                    href="https://github.com/odex21"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    github.com/odex21
+                  </a>
+                </div>
+                <p class="contact-note">
+                  如果你也是在玩 DevTools MCP、Web 自动化或者对这份 Workshop 记录感兴趣，欢迎通过
+                  GitHub 交流。这个页面会部署在 GitHub Pages 上，之后也会逐步补充更多实践细节。
+                </p>
+              </aside>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <div class="container footer-inner">
+          <div>© <span id="year"></span> DevFest Workshop Log · odex</div>
+          <div class="footer-nav">
+            <a href="#home" class="footer-link">回到顶部</a>
+            <span>·</span>
+            <a href="#devtools-mcp" class="footer-link">跳转到 DevTools MCP</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      // 简单的导航滚动和 active 状态逻辑
+      (function () {
+        const navLinks = document.querySelectorAll(".nav-link");
+        const buttons = document.querySelectorAll(
+          'button[data-target], .btn[data-target]'
+        );
+
+        function scrollToSection(id) {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const rect = el.getBoundingClientRect();
+          const offset = window.scrollY || window.pageYOffset;
+          const headerOffset = 72;
+          window.scrollTo({
+            top: rect.top + offset - headerOffset,
+            behavior: "smooth",
+          });
+        }
+
+        navLinks.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const target = btn.getAttribute("data-target");
+            scrollToSection(target);
+          });
+        });
+
+        buttons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const target = btn.getAttribute("data-target");
+            scrollToSection(target);
+          });
+        });
+
+        // 根据滚动位置更新导航高亮
+        const sections = ["home", "gdg-devfest", "devtools-mcp", "about"].map(
+          (id) => ({
+            id,
+            el: document.getElementById(id),
+          })
+        );
+
+        function updateActiveNav() {
+          const scrollPos = window.scrollY || window.pageYOffset;
+          const viewportHeight = window.innerHeight;
+          let currentId = "home";
+
+          for (const { id, el } of sections) {
+            if (!el) continue;
+            const rect = el.getBoundingClientRect();
+            const sectionTop = rect.top + scrollPos;
+            if (scrollPos + viewportHeight * 0.35 >= sectionTop) {
+              currentId = id;
+            }
+          }
+
+          navLinks.forEach((link) => {
+            if (link.getAttribute("data-target") === currentId) {
+              link.classList.add("active");
+            } else {
+              link.classList.remove("active");
+            }
+          });
+        }
+
+        window.addEventListener("scroll", updateActiveNav);
+        window.addEventListener("load", updateActiveNav);
+
+        // 更新年份
+        const yearSpan = document.getElementById("year");
+        if (yearSpan) {
+          yearSpan.textContent = new Date().getFullYear();
+        }
+      })();
+    </script>
+  </body>
+  </html>
+
