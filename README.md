@@ -1,6 +1,6 @@
 # DevFest DevTools MCP Workshop Log
 
-> 记录我在 Google DevFest Workshop 中，围绕 **Chrome DevTools MCP Server** 的一次实践。
+> 记录我在 **Google DevFest 2025 深圳开发者嘉年华（AI / 出海 / Android / Web）** 上，围绕 **Chrome DevTools MCP Server** 的一场实战 Workshop。
 
 这个仓库是一份「活动官网风格」的单页网站，用来记录：
 
