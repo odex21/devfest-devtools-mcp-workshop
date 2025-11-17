@@ -20,6 +20,9 @@
   },
   "homepage": "https://github.com/odex21/devfest-devtools-mcp-workshop#readme",
   "description": "",
+  "dependencies": {
+    "marked": "^13.0.3"
+  },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
     "daisyui": "^4.12.0",
