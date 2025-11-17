@@ -8,6 +8,8 @@
 - Chrome DevTools MCP 的概念和实操
 - 我自己（odex）在这次 Workshop 中的收获与配置记录
 
+> 特别说明：页面内容与布局是由 **Codex GPT‑5 + Chrome DevTools MCP + 我自己** 一起协作完成的。
+
 线上版通过 **GitHub Pages** 发布。
 
 ---
@@ -129,4 +131,3 @@ args = ["-y", "chrome-devtools-mcp@latest"]
   - 在 Workshop 中踩过的坑
   - 具体 MCP 调用场景的截图
   - 对 DevTools MCP 官方文档（Chrome 开发者博客）的个人理解笔记。
-
